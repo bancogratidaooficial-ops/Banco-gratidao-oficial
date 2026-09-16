@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plug TV - Dub + Leg</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#000;color:#fff;font-family:Arial;padding-bottom:120px}
+.header{background:#111;border-bottom:3px solid #ffcc00;padding:12px;text-align:center;position:sticky;top:0;z-index:30}
+.pix{background:#ffcc00;color:#000;font-weight:900;padding:10px 16px;border-radius:12px;display:inline-block;margin:8px 0}
+.generos{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+.pasta{border-radius:16px;padding:18px 12px 12px;position:relative;border:1px solid #333}
+.pasta.dub{background:#0f1a12;border-color:#00ff88}
+.pasta.leg{background:#0f131a;border-color:#00aaff}
+.badge{position:absolute;top:6px;left:8px;font-size:7px;font-weight:900;padding:3px 6px;border-radius:6px}
+.badge-dub{background:#00ff88;color:#000}.badge-leg{background:#00aaff;color:#fff}
+.btn-pasta{position:absolute;top:6px;right:8px;background:#ff2222;border:none;color:#fff;border-radius:50%;width:24px;height:24px}
+.btn-open{width:100%;margin-top:8px;border:none;padding:9px;border-radius:10px;font-weight:900}
+.topo-lista{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#111;position:sticky;top:0;z-index:10}
+.filme{border-radius:12px;margin:8px 10px;padding:10px;display:flex;justify-content:space-between;align-items:center;background:#1a1a1a}
+.filme.dub{border-left:4px solid #00ff88}.filme.leg{border-left:4px solid #00aaff}
+.btn{border:none;padding:10px 12px;border-radius:8px;font-weight:bold}.btn-ver{background:#ffcc00;color:#000}.btn-del{background:#333;color:#fff}
+.barra{position:fixed;bottom:0;left:0;width:100%;background:#111;border-top:2px solid #222;display:flex;gap:4px;padding:8px;z-index:40}
+.barra button{flex:1;padding:11px 3px;border-radius:10px;border:none;font-weight:900;font-size:8px}
+#modalP,#modalG,#modalF{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);z-index:999;padding:15px;overflow:auto}
+input,select{width:100%;padding:12px;margin:6px 0;background:#222;color:#fff;border:1px solid #444;border-radius:8px}
+.big{width:100%;padding:14px;border:none;border-radius:12px;font-weight:900;margin:8px 0}
+</style>
+</head>
+<body>
+<div class="header">
+🔌 <b>PLUG TV GRATIDÃO</b><br>
+<div class="pix">💰 PIX: 025.446.319-37 • JOSÉ MARCOS</div><br>
+<small>🟩 6 Pastas DUBLADO + 🟦 6 Pastas LEGENDADO + 📱 Memória</small>
+</div>
+<div id="telaGeneros"></div>
+<div id="telaFilmes" style="display:none"></div>
+<div class="barra">
+<button style="background:#00ff88" onclick="abrirAddDireto()">📱 MEMÓRIA</button>
+<button style="background:#00aaff;color:#fff" onclick="document.getElementById('fileMulti').click()">📂 VÁRIOS</button>
+<button style="background:#ffcc00" onclick="abrirGenero()">➕ GÊNERO</button>
+<button style="background:#fff" onclick="resetar()">🔄 RESET</button>
+</div>
+<input type="file" id="fileInput" accept="video/*" style="display:none">
+<input type="file" id="fileMulti" accept="video/*" multiple style="display:none">
+<div id="modalP" style="background:#000"><button onclick="fecharP()" style="position:absolute;top:10px;right:10px;background:#ffcc00;border:none;padding:10px 15px;border-radius:10px;font-weight:bold">✕ FECHAR</button><video id="v" controls autoplay style="width:100%;height:85%;margin-top:50px"></video><iframe id="yt" style="width:100%;height:85%;margin-top:50px;display:none" allowfullscreen frameborder="0"></iframe></div>
+<div id="modalG"><h2>➕ Nova Pasta</h2><input id="nomeGenero" placeholder="Nome"><select id="tipoGenero"><option value="dub">🟩 DUBLADO</option><option value="leg">🟦 LEGENDADO</option></select><button onclick="salvarGenero()" style="width:100%;padding:14px;background:#ffcc00;border:none;border-radius:10px;font-weight:900">CRIAR</button><button onclick="fecharModais()" style="width:100%;padding:10px;background:#333;color:#fff;border:none;border-radius:10px;margin-top:8px">Voltar</button></div>
+<div id="modalF"><h2>📱 Adicionar da Memória</h2><select id="fGenero"></select><div id="nomeArquivo" style="background:#111;padding:10px;border-radius:8px;color:#00ff88;margin:6px 0;display:none"></div><button class="big" style="background:#00ff88" onclick="document.getElementById('fileInput').click()">📂 ESCOLHER FILME</button><button id="btnSalvar" onclick="salvarDaMemoria()" style="display:none;width:100%;padding:14px;background:#ffcc00;border:none;border-radius:10px;font-weight:900">✅ SALVAR</button><button onclick="fecharModais()" style="width:100%;padding:10px;background:#333;color:#fff;border:none;border-radius:10px;margin-top:8px">Cancelar</button></div>
+<script>
+const YT=['jfKfPfyJRdk','2YBtspm8j8M','dQw4w9WgXcQ'];
+const MP4='https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_Trailer_720_10s_1MB.mp4';
+function mk(nomes,tipo){return nomes.map((n,i)=>({nome:n+(tipo=='dub'?' 🔊 DUBLADO':' 🔤 LEGENDADO'),tipo:i%4==0?'youtube':'mp4',link:i%4==0?`https://www.youtube-nocookie.com/embed/${YT[i%YT.length]}?autoplay=1`:MP4,audio:tipo}));}
+let padraoBase=[
+{nome:"🔥 Ação Dublado",tipo:"dub",filmes:mk(["John Wick 4","Missão Impossível 7","Velozes 10","Resgate 2","O Protetor 3","Atirador","Rambo 5","Duro de Matar","Top Gun Maverick","Creed 3","John Wick 3","Velozes 9","Agente Oculto","Sem Remorso","Alerta Vermelho","O Alvo","Invasão","Esquadrão 6","Força Total","Mercenários 4"],"dub")},
+{nome:"🔥 Ação Legendado",tipo:"leg",filmes:mk(["John Wick 4","Missão Impossível 7","Velozes 10","Resgate 2","O Protetor 3","Atirador","Rambo 5","Duro de Matar","Top Gun Maverick","Creed 3","John Wick 3","Velozes 9","Agente Oculto","Sem Remorso","Alerta Vermelho","O Alvo","Invasão","Esquadrão 6","Força Total","Mercenários 4"],"leg")},
+{nome:"😱 Terror Dublado",tipo:"dub",filmes:mk(["Invocação do Mal 3","Annabelle 3","A Freira 2","It 2","Pânico 6","Sorria","Telefone Preto","Hereditário","Midsommar","O Exorcista","Halloween Ends","Chucky","Jogos Mortais 10","O Grito","Atividade Paranormal","A Órfã 2","Corra","Nós","Babadook","A Bruxa"],"dub")},
+{nome:"😱 Terror Legendado",tipo:"leg",filmes:mk(["Invocação do Mal 3","Annabelle 3","A Freira 2","It 2","Pânico 6","Sorria","Telefone Preto","Hereditário","Midsommar","O Exorcista","Halloween Ends","Chucky","Jogos Mortais 10","O Grito","Atividade Paranormal","A Órfã 2","Corra","Nós","Babadook","A Bruxa"],"leg")},
+{nome:"📺 Séries Dublado",tipo:"dub",filmes:mk(["The Last of Us","Stranger Things","Round 6","La Casa de Papel","Breaking Bad","The Witcher","Game of Thrones","Walking Dead","Peaky Blinders","Vikings","Lupin","Cobra Kai","Sintonia","Cidade Invisível","3%","Narcos","Elite","Dark","The Boys","Wandinha"],"dub")},
+{nome:"📺 Séries Legendado",tipo:"leg",filmes:mk(["The Last of Us","Stranger Things","Round 6","La Casa de Papel","Breaking Bad","The Witcher","Game of Thrones","Walking Dead","Peaky Blinders","Vikings","Lupin","Cobra Kai","Sintonia","Cidade Invisível","3%","Narcos","Elite","Dark","The Boys","Wandinha"],"leg")},
+{nome:"💃 Novelas Dublado",tipo:"dub",filmes:mk(["Avenida Brasil","O Rei do Gado","Pantanal","Terra e Paixão","Vai na Fé","Todas as Flores","Caminho das Índias","O Clone","Senhora do Destino","Por Amor","Mulheres Apaixonadas","Laços de Família","Chocolate com Pimenta","Alma Gêmea","O Cravo e a Rosa","Cordel Encantado","A Favorita","Fina Estampa","Dona do Pedaço","Amor Perfeito"],"dub")},
+{nome:"💃 Novelas Legendado",tipo:"leg",filmes:mk(["Avenida Brasil","O Rei do Gado","Pantanal","Terra e Paixão","Vai na Fé","Todas as Flores","Caminho das Índias","O Clone","Senhora do Destino","Por Amor","Mulheres Apaixonadas","Laços de Família","Chocolate com Pimenta","Alma Gêmea","O Cravo e a Rosa","Cordel Encantado","A Favorita","Fina Estampa","Dona do Pedaço","Amor Perfeito"],"leg")},
+];
+let dados=JSON.parse(localStorage.getItem('plugtv_dual')||JSON.stringify(padraoBase));
+let pastaAtual=null,arquivoTemp=null,arquivoNomeTemp='',db;
+let req=indexedDB.open('PlugTVDual',1);req.onupgradeneeded=e=>e.target.result.createObjectStore('videos',{keyPath:'id'});req.onsuccess=e=>{db=e.target.result;renderGeneros();};req.onerror=()=>renderGeneros();
+function salvarLS(){localStorage.setItem('plugtv_dual',JSON.stringify(dados));}
+function renderGeneros(){let h='<div class="generos">';dados.forEach((g,i)=>{let cl=g.tipo=='dub'?'dub':'leg';let
